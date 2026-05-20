@@ -82,6 +82,24 @@ def get_project_dir(
     return working_dir
 
 
+def _is_existing_repository_clone_error(
+    git_dir: Path, stderr: str | None
+) -> bool:
+    """Return True when git clone failed because the target checkout exists."""
+    if not git_dir.is_dir() or not (git_dir / '.git').is_dir():
+        return False
+
+    normalized_stderr = (stderr or '').lower()
+    return any(
+        message in normalized_stderr
+        for message in (
+            'already exists and is not an empty directory',
+            'destination path',
+            'file exists',
+        )
+    )
+
+
 @dataclass
 class AppConversationServiceBase(AppConversationService, ABC):
     """App Conversation service which adds git specific functionality.
@@ -355,6 +373,7 @@ class AppConversationServiceBase(AppConversationService, ABC):
         dir_name = request.selected_repository.split('/')[-1]
         quoted_remote_repo_url = shlex.quote(remote_repo_url)
         quoted_dir_name = shlex.quote(dir_name)
+        git_dir = Path(workspace.working_dir) / dir_name
 
         # Clone the repo - this is the slow part!
         clone_command = f'git clone {quoted_remote_repo_url} {quoted_dir_name}'
@@ -362,7 +381,12 @@ class AppConversationServiceBase(AppConversationService, ABC):
             clone_command, workspace.working_dir, 120
         )
         if result.exit_code:
-            _logger.warning(f'Git clone failed: {result.stderr}')
+            if _is_existing_repository_clone_error(git_dir, result.stderr):
+                _logger.info(
+                    f'Git clone reported an existing checkout; reusing {git_dir}'
+                )
+            else:
+                _logger.warning(f'Git clone failed: {result.stderr}')
 
         # Checkout the appropriate branch
         if request.selected_branch:
@@ -375,7 +399,6 @@ class AppConversationServiceBase(AppConversationService, ABC):
             checkout_command = (
                 f'git checkout -b {shlex.quote(openhands_workspace_branch)}'
             )
-        git_dir = Path(workspace.working_dir) / dir_name
         result = await workspace.execute_command(checkout_command, git_dir)
         if result.exit_code:
             _logger.warning(f'Git checkout failed: {result.stderr}')

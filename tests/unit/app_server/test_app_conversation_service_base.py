@@ -293,6 +293,58 @@ async def test_clone_or_init_git_repo_custom_timeout(service):
         )
 
 
+@pytest.mark.asyncio
+async def test_clone_or_init_git_repo_reuses_existing_checkout_on_clone_error(
+    tmp_path,
+):
+    """Test git clone failure is treated as reuse when the repo already exists."""
+    workspace_root = tmp_path / 'workspace'
+    repo_dir = workspace_root / 'repo'
+    (repo_dir / '.git').mkdir(parents=True)
+
+    mock_workspace = MockWorkspace(working_dir=str(workspace_root))
+    mock_workspace.execute_command = AsyncMock(
+        side_effect=[
+            MockCommandResult(exit_code=0),
+            MockCommandResult(
+                exit_code=1,
+                stderr=(
+                    "fatal: destination path 'repo' already exists and is not "
+                    'an empty directory.'
+                ),
+            ),
+            MockCommandResult(exit_code=0),
+        ]
+    )
+
+    user_info = MockUserInfo()
+    service, mock_user_context = _create_service_with_mock_user_context(
+        user_info, bind_methods=('clone_or_init_git_repo',)
+    )
+    service.init_git_in_empty_workspace = True
+    service._configure_git_user_settings = AsyncMock()
+    mock_user_context.get_authenticated_git_url = AsyncMock(
+        return_value='https://github.com/test/repo.git'
+    )
+
+    task = Mock()
+    task.request = Mock(selected_repository='owner/repo', selected_branch='main')
+
+    with patch(
+        'openhands.app_server.app_conversation.app_conversation_service_base._logger'
+    ) as mock_logger:
+        await service.clone_or_init_git_repo(task, mock_workspace)
+
+    assert mock_workspace.execute_command.call_count == 3
+    mock_workspace.execute_command.assert_any_call(
+        'git checkout main',
+        repo_dir,
+    )
+    mock_logger.info.assert_called_once_with(
+        f'Git clone reported an existing checkout; reusing {repo_dir}'
+    )
+
+
 @patch(
     'openhands.app_server.app_conversation.app_conversation_service_base.LLMSummarizingCondenser'
 )
