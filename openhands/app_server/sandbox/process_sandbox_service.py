@@ -181,12 +181,24 @@ class ProcessSandboxService(SandboxService):
             process = psutil.Process(process_info.pid)
             if process.is_running():
                 status = process.status()
-                if status == psutil.STATUS_RUNNING:
-                    return SandboxStatus.RUNNING
-                elif status == psutil.STATUS_STOPPED:
+                paused_statuses = {
+                    psutil.STATUS_STOPPED,
+                    getattr(psutil, 'STATUS_TRACING_STOP', None),
+                }
+                zombie_statuses = {
+                    getattr(psutil, 'STATUS_ZOMBIE', None),
+                    getattr(psutil, 'STATUS_DEAD', None),
+                }
+                if status in paused_statuses:
                     return SandboxStatus.PAUSED
-                else:
-                    return SandboxStatus.STARTING
+                if status in zombie_statuses:
+                    return SandboxStatus.MISSING
+
+                # On Linux, healthy long-running processes commonly report
+                # STATUS_SLEEPING / STATUS_DISK_SLEEP / STATUS_IDLE rather than
+                # STATUS_RUNNING. Treat these as RUNNING to avoid sandboxes
+                # getting stuck in STARTING.
+                return SandboxStatus.RUNNING
             else:
                 return SandboxStatus.MISSING
         except (psutil.NoSuchProcess, psutil.AccessDenied):

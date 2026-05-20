@@ -58,6 +58,17 @@ def _get_kvm_enabled_default() -> bool:
     return value.lower() in ('true', '1', 'yes')
 
 
+def _get_nvidia_runtime_default() -> bool:
+    """Get default for enabling NVIDIA runtime from environment variables."""
+    value = os.getenv('SANDBOX_NVIDIA_RUNTIME', '')
+    return value.lower() in ('true', '1', 'yes')
+
+
+def _get_gpu_count_default() -> str:
+    """Default GPU count to request; 'all' by default or from env var."""
+    return os.getenv('SANDBOX_GPU_COUNT', 'all')
+
+
 class VolumeMount(BaseModel):
     """Mounted volume within the container."""
 
@@ -102,6 +113,10 @@ class DockerSandboxService(SandboxService):
     startup_grace_seconds: int = STARTUP_GRACE_SECONDS
     use_host_network: bool = False
     kvm_enabled: bool = False
+    # Whether to request GPUs for sandbox containers (NVIDIA runtime/device requests)
+    use_nvidia_runtime: bool = False
+    gpu_count: str | int = 'all'
+    gpu_capabilities: list[str] = field(default_factory=lambda: ['gpu', 'utility', 'compute'])
 
     def _find_unused_port(self) -> int:
         """Find an unused port on the host machine."""
@@ -460,6 +475,21 @@ class DockerSandboxService(SandboxService):
 
         try:
             # Create and start the container
+            # Build device_requests for GPU support if requested
+            device_requests = None
+            runtime = None
+            if self.use_nvidia_runtime:
+                # Newer Docker supports device_requests for GPUs; also set runtime for older setups
+                try:
+                    from docker.types import DeviceRequest
+
+                    device_requests = [
+                        DeviceRequest(count=self.gpu_count, capabilities=self.gpu_capabilities)
+                    ]
+                except Exception:
+                    device_requests = None
+                runtime = 'nvidia'
+
             container = self.docker_client.containers.run(  # type: ignore[call-overload,misc]
                 image=sandbox_spec.id,
                 command=sandbox_spec.command,  # Use default command from image
@@ -655,6 +685,25 @@ class DockerSandboxServiceInjector(SandboxServiceInjector):
             'Configure via SANDBOX_KVM_ENABLED environment variable.'
         ),
     )
+    use_nvidia_runtime: bool = Field(
+        default_factory=_get_nvidia_runtime_default,
+        description=(
+            'Whether to request GPU resources for sandbox containers. When enabled, '
+            'the injector will attempt to pass GPU device requests to the container. '
+            'Configure via SANDBOX_NVIDIA_RUNTIME environment variable.'
+        ),
+    )
+    gpu_count: str = Field(
+        default_factory=_get_gpu_count_default,
+        description=(
+            "How many GPUs to request for sandbox containers. Use 'all' or an integer. "
+            'Configure via SANDBOX_GPU_COUNT environment variable.'
+        ),
+    )
+    gpu_capabilities: list[str] = Field(
+        default_factory=lambda: ['gpu', 'utility', 'compute'],
+        description='List of GPU capabilities to request for device_requests.',
+    )
 
     async def inject(
         self, state: InjectorState, request: Request | None = None
@@ -690,4 +739,7 @@ class DockerSandboxServiceInjector(SandboxServiceInjector):
                 startup_grace_seconds=self.startup_grace_seconds,
                 use_host_network=self.use_host_network,
                 kvm_enabled=self.kvm_enabled,
+                use_nvidia_runtime=self.use_nvidia_runtime,
+                gpu_count=self.gpu_count,
+                gpu_capabilities=self.gpu_capabilities,
             )

@@ -1,3 +1,4 @@
+import os
 from typing import AsyncGenerator
 
 from fastapi import Request
@@ -19,6 +20,7 @@ from openhands.app_server.services.injector import InjectorState
 
 
 def get_default_sandbox_specs():
+    process_working_dir = os.getenv('OH_PROCESS_WORKING_DIR') or '.'
     return [
         SandboxSpecInfo(
             id=get_agent_server_image(),
@@ -31,7 +33,7 @@ def get_default_sandbox_specs():
                 'OH_ENABLE_VS_CODE': '0',
                 **get_agent_server_env(),
             },
-            working_dir='.',
+            working_dir=process_working_dir,
         )
     ]
 

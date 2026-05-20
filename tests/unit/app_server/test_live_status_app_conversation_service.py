@@ -1644,6 +1644,83 @@ class TestLiveStatusAppConversationService:
         )
         assert saved_info.id == conversation_id
 
+    @patch(
+        'openhands.app_server.app_conversation.live_status_app_conversation_service.AsyncRemoteWorkspace'
+    )
+    @patch(
+        'openhands.app_server.app_conversation.live_status_app_conversation_service.ConversationInfo'
+    )
+    async def test_start_app_conversation_empty_working_dir_falls_back_to_dot(
+        self, mock_conversation_info_class, mock_remote_workspace_class
+    ):
+        """Empty sandbox_spec.working_dir should not cause agent-server 500s."""
+        # Arrange
+        conversation_id = uuid4()
+
+        self.mock_user.sandbox_grouping_strategy = SandboxGroupingStrategy.NO_GROUPING
+        self.mock_user_context.get_user_id = AsyncMock(return_value='test_user_123')
+        self.mock_user_context.get_user_info = AsyncMock(return_value=self.mock_user)
+
+        mock_sandbox_spec = Mock(spec=SandboxSpecInfo)
+        mock_sandbox_spec.working_dir = ''
+        self.mock_sandbox.sandbox_spec_id = str(uuid4())
+        self.mock_sandbox.id = str(uuid4())
+        self.mock_sandbox.session_api_key = 'test_session_key'
+        exposed_url = ExposedUrl(
+            name=AGENT_SERVER, url='http://agent-server:8000', port=60000
+        )
+        self.mock_sandbox.exposed_urls = [exposed_url]
+
+        self.mock_sandbox_service.get_sandbox = AsyncMock(return_value=self.mock_sandbox)
+        self.mock_sandbox_spec_service.get_sandbox_spec = AsyncMock(return_value=mock_sandbox_spec)
+
+        # Stub async persistence calls used during startup
+        self.mock_app_conversation_info_service.save_app_conversation_info = AsyncMock()
+        self.mock_app_conversation_start_task_service.save_app_conversation_start_task = (
+            AsyncMock()
+        )
+
+        async def mock_wait_for_sandbox(task):
+            task.sandbox_id = self.mock_sandbox.id
+            yield task
+
+        async def mock_run_setup_scripts(task, sandbox, workspace, agent_server_url):
+            yield task
+
+        self.service._wait_for_sandbox_start = mock_wait_for_sandbox
+        self.service.run_setup_scripts = mock_run_setup_scripts
+
+        mock_agent = Mock(spec=Agent)
+        mock_agent.llm = Mock(spec=LLM)
+        mock_agent.llm.model = 'gpt-4'
+        mock_start_request = Mock(spec=StartConversationRequest)
+        mock_start_request.agent = mock_agent
+        mock_start_request.model_dump.return_value = {'test': 'data'}
+        self.service._build_start_conversation_request_for_user = AsyncMock(
+            return_value=mock_start_request
+        )
+
+        mock_conversation_info = Mock()
+        mock_conversation_info.id = conversation_id
+        mock_conversation_info_class.model_validate.return_value = mock_conversation_info
+
+        mock_response = Mock()
+        mock_response.json.return_value = {'id': str(conversation_id)}
+        mock_response.raise_for_status = Mock()
+        self.mock_httpx_client.post = AsyncMock(return_value=mock_response)
+
+        self.mock_event_callback_service.save_event_callback = AsyncMock()
+
+        request = AppConversationStartRequest(conversation_id=conversation_id)
+
+        # Act
+        async for _task in self.service._start_app_conversation(request):
+            pass
+
+        # Assert
+        _, kwargs = mock_remote_workspace_class.call_args
+        assert kwargs['working_dir'] == '.'
+
     @pytest.mark.asyncio
     async def test_configure_llm_and_mcp_with_custom_remote_servers(self):
         """Test _configure_llm_and_mcp merges custom remote servers."""

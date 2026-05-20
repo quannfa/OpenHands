@@ -286,7 +286,7 @@ class LiveStatusAppConversationService(AppConversationServiceBase):
             conversation_id = request.conversation_id or uuid4()
 
             # Setup working dir based on grouping
-            working_dir = sandbox_spec.working_dir
+            working_dir = sandbox_spec.working_dir or '.'
             sandbox_grouping_strategy = await self._get_sandbox_grouping_strategy()
             if sandbox_grouping_strategy != SandboxGroupingStrategy.NO_GROUPING:
                 working_dir = f'{working_dir}/{conversation_id.hex}'
