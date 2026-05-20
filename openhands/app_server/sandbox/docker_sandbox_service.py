@@ -483,8 +483,10 @@ class DockerSandboxService(SandboxService):
                 try:
                     from docker.types import DeviceRequest
 
+                    gpu_count = -1 if self.gpu_count.lower() == 'all' else int(self.gpu_count)
+
                     device_requests = [
-                        DeviceRequest(count=self.gpu_count, capabilities=self.gpu_capabilities)
+                        DeviceRequest(count=gpu_count, capabilities=[self.gpu_capabilities])
                     ]
                 except Exception:
                     device_requests = None
@@ -514,6 +516,8 @@ class DockerSandboxService(SandboxService):
                 network_mode=network_mode,
                 # Device passthrough for KVM hardware virtualization
                 devices=devices,
+                device_requests=device_requests,
+                runtime=runtime,
             )
 
             sandbox_info = await self._container_to_sandbox_info(container)
