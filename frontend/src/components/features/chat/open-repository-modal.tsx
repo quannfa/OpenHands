@@ -16,7 +16,11 @@ import RepoForkedIcon from "#/icons/repo-forked.svg?react";
 interface OpenRepositoryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLaunch: (repository: GitRepository, branch: Branch) => void;
+  onLaunch: (
+    repository: GitRepository,
+    branch: Branch,
+    useLocalRepository?: boolean,
+  ) => void;
   defaultProvider?: Provider;
 }
 
@@ -35,6 +39,7 @@ export function OpenRepositoryModal({
   const [selectedRepository, setSelectedRepository] =
     useState<GitRepository | null>(null);
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
+  const [useLocalRepository, setUseLocalRepository] = useState<boolean>(false);
 
   // Auto-select provider: single provider auto-selects, multiple uses defaultProvider if available
   useEffect(() => {
@@ -74,7 +79,7 @@ export function OpenRepositoryModal({
   const handleLaunch = () => {
     if (!selectedRepository || !selectedBranch) return;
 
-    onLaunch(selectedRepository, selectedBranch);
+    onLaunch(selectedRepository, selectedBranch, useLocalRepository);
     setSelectedRepository(null);
     setSelectedBranch(null);
     onClose();
@@ -140,6 +145,26 @@ export function OpenRepositoryModal({
             disabled={!selectedRepository}
             className="w-full"
           />
+        </div>
+
+        <div className="flex flex-col gap-2 w-full mt-2">
+          <label
+            htmlFor="modal-use-local-repo-select"
+            className="text-sm text-white"
+          >
+            {t(I18nKey.COMMON$USE_LOCAL_REPOSITORY)}
+          </label>
+          <select
+            id="modal-use-local-repo-select"
+            value={String(useLocalRepository)}
+            onChange={(e) => setUseLocalRepository(e.target.value === "true")}
+            className="w-full bg-transparent border border-gray-600 rounded px-2 py-1 text-sm"
+          >
+            <option value="false">{t(I18nKey.COMMON$NO)}</option>
+            <option value="true">
+              {t(I18nKey.COMMON$USE_LOCAL_REPOSITORY)}
+            </option>
+          </select>
         </div>
 
         <div

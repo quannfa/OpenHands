@@ -10,6 +10,7 @@ interface CreateConversationVariables {
     name: string;
     gitProvider: Provider;
     branch?: string;
+    useLocalRepository?: boolean;
   };
   suggestedTask?: SuggestedTask;
   conversationInstructions?: string;
@@ -57,6 +58,9 @@ export const useCreateConversation = () => {
         parentConversationId,
         agentType,
         plugins,
+        undefined, // sandbox_id
+        undefined, // llm_model
+        repository?.useLocalRepository ?? false,
       );
 
       // Return a special task ID that the frontend will recognize

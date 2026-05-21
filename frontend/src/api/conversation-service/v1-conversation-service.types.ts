@@ -61,6 +61,7 @@ export interface V1AppConversationStartRequest {
   selected_repository?: string | null;
   selected_branch?: string | null;
   git_provider?: Provider | null;
+  use_local_repository?: boolean | null;
   suggested_task?: SuggestedTask | null;
   title?: string | null;
   trigger?: ConversationTrigger | null;

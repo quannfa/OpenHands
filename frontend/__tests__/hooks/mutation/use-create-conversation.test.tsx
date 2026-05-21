@@ -93,6 +93,9 @@ describe("useCreateConversation", () => {
         undefined,
         undefined,
         undefined, // plugins
+        undefined, // sandbox_id
+        undefined, // llm_model
+        false, // use_local_repository
       );
     });
   });

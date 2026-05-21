@@ -33,6 +33,8 @@ export function RepositorySelectionForm({
   );
   const [selectedProvider, setSelectedProvider] =
     React.useState<Provider | null>(null);
+  const [useLocalRepository, setUseLocalRepository] =
+    React.useState<boolean>(false);
 
   const { providers } = useUserProviders();
   const {
@@ -174,6 +176,22 @@ export function RepositorySelectionForm({
         </div>
         {renderRepositorySelector()}
         {renderBranchSelector()}
+        <div className="flex flex-col gap-2 pt-2 w-full">
+          <label htmlFor="use-local-repo-select" className="text-sm text-white">
+            {t(I18nKey.COMMON$USE_LOCAL_REPOSITORY)}
+          </label>
+          <select
+            id="use-local-repo-select"
+            value={String(useLocalRepository)}
+            onChange={(e) => setUseLocalRepository(e.target.value === "true")}
+            className="w-full bg-transparent border border-gray-600 rounded px-2 py-1 text-sm"
+          >
+            <option value="false">{t(I18nKey.COMMON$NO)}</option>
+            <option value="true">
+              {t(I18nKey.COMMON$USE_LOCAL_REPOSITORY)}
+            </option>
+          </select>
+        </div>
       </div>
 
       <BrandButton
@@ -199,6 +217,7 @@ export function RepositorySelectionForm({
                 name: selectedRepository?.full_name || "",
                 gitProvider: selectedRepository?.git_provider || "github",
                 branch: selectedBranch?.name || "main",
+                useLocalRepository,
               },
             },
             {

@@ -408,6 +408,9 @@ describe("RepoConnector", () => {
       undefined,
       undefined,
       undefined,
+      undefined,
+      undefined,
+      false,
     );
   });
 

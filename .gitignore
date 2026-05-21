@@ -260,3 +260,6 @@ runtime_*.tar
 test-results
 .sessions
 .eval_sessions
+
+workspace/*
+openhands_home/*

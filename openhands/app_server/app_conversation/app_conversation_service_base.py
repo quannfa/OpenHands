@@ -375,17 +375,32 @@ class AppConversationServiceBase(AppConversationService, ABC):
         quoted_dir_name = shlex.quote(dir_name)
         git_dir = Path(workspace.working_dir) / dir_name
 
-        # Clone the repo - this is the slow part!
-        clone_command = f'git clone {quoted_remote_repo_url} {quoted_dir_name}'
-        result = await workspace.execute_command(
-            clone_command, workspace.working_dir, 120
-        )
-        if result.exit_code:
-            if _is_existing_repository_clone_error(git_dir, result.stderr):
-                _logger.info(
-                    f'Git clone reported an existing checkout; reusing {git_dir}'
+        # If the client explicitly asked to use a local repository, prefer
+        # reusing the existing directory instead of attempting to clone.
+        if getattr(request, 'use_local_repository', False):
+            # Check that the repo directory and .git exist
+            check_cmd = f'test -d {shlex.quote(str(git_dir))} && test -d {shlex.quote(str(git_dir / ".git"))}'
+            check_result = await workspace.execute_command(check_cmd, workspace.working_dir)
+            if check_result.exit_code != 0:
+                _logger.error(
+                    f'use_local_repository requested but local repo not found at {git_dir}'
                 )
+                # Fall back to attempting a normal clone so user can still proceed
+                clone_command = f'git clone {quoted_remote_repo_url} {quoted_dir_name}'
+                result = await workspace.execute_command(
+                    clone_command, workspace.working_dir, 120
+                )
+                if result.exit_code:
+                    _logger.warning(f'Git clone failed: {result.stderr}')
             else:
+                _logger.info(f'Using existing local repository at {git_dir}')
+        else:
+            # Clone the repo - this is the slow part!
+            clone_command = f'git clone {quoted_remote_repo_url} {quoted_dir_name}'
+            result = await workspace.execute_command(
+                clone_command, workspace.working_dir, 120
+            )
+            if result.exit_code:
                 _logger.warning(f'Git clone failed: {result.stderr}')
 
         # Checkout the appropriate branch

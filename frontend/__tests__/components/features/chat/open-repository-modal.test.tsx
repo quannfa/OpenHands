@@ -235,6 +235,7 @@ describe("OpenRepositoryModal", () => {
         main_branch: "main",
       },
       { name: "main" },
+      false,
     );
     expect(mockOnClose).toHaveBeenCalledTimes(1);
   });

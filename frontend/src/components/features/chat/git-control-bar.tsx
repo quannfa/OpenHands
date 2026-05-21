@@ -62,6 +62,7 @@ export function GitControlBar({ onSuggestionsClick }: GitControlBarProps) {
   const handleLaunchRepository = (
     repository: GitRepository,
     branch: Branch,
+    useLocalRepository?: boolean,
   ) => {
     if (!conversationId) return;
 
@@ -98,11 +99,14 @@ export function GitControlBar({ onSuggestionsClick }: GitControlBarProps) {
             repository.git_provider.charAt(0).toUpperCase() +
             repository.git_provider.slice(1);
           const clonePrompt = `Clone ${repository.full_name} from ${providerName} and checkout branch ${branch.name}.`;
+          const promptWithFlag = useLocalRepository
+            ? `${clonePrompt} If a local copy is mounted in the sandbox, reuse it instead of cloning.`
+            : clonePrompt;
           setOptimisticUserMessage(clonePrompt);
           sendRef.current({
             action: "message",
             args: {
-              content: clonePrompt,
+              content: promptWithFlag,
               timestamp: new Date().toISOString(),
             },
           });

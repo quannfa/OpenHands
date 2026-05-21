@@ -301,22 +301,11 @@ async def test_clone_or_init_git_repo_reuses_existing_checkout_on_clone_error(
     workspace_root = tmp_path / 'workspace'
     repo_dir = workspace_root / 'repo'
     (repo_dir / '.git').mkdir(parents=True)
-
     mock_workspace = MockWorkspace(working_dir=str(workspace_root))
+    # First call: check for existing repo (succeeds). Second: checkout (succeeds).
     mock_workspace.execute_command = AsyncMock(
-        side_effect=[
-            MockCommandResult(exit_code=0),
-            MockCommandResult(
-                exit_code=1,
-                stderr=(
-                    "fatal: destination path 'repo' already exists and is not "
-                    'an empty directory.'
-                ),
-            ),
-            MockCommandResult(exit_code=0),
-        ]
+        side_effect=[MockCommandResult(exit_code=0), MockCommandResult(exit_code=0)]
     )
-
     user_info = MockUserInfo()
     service, mock_user_context = _create_service_with_mock_user_context(
         user_info, bind_methods=('clone_or_init_git_repo',)
@@ -328,20 +317,20 @@ async def test_clone_or_init_git_repo_reuses_existing_checkout_on_clone_error(
     )
 
     task = Mock()
-    task.request = Mock(selected_repository='owner/repo', selected_branch='main')
+    task = Mock()
+    task.request = Mock(
+        selected_repository='owner/repo', selected_branch='main', use_local_repository=True
+    )
 
     with patch(
         'openhands.app_server.app_conversation.app_conversation_service_base._logger'
     ) as mock_logger:
         await service.clone_or_init_git_repo(task, mock_workspace)
 
-    assert mock_workspace.execute_command.call_count == 3
-    mock_workspace.execute_command.assert_any_call(
-        'git checkout main',
-        repo_dir,
-    )
+    assert mock_workspace.execute_command.call_count == 2
+    mock_workspace.execute_command.assert_any_call('git checkout main', repo_dir)
     mock_logger.info.assert_called_once_with(
-        f'Git clone reported an existing checkout; reusing {repo_dir}'
+        f'Using existing local repository at {repo_dir}'
     )
 
 

@@ -206,6 +206,17 @@ class AppConversationStartRequest(OpenHandsModel):
             'Warning: Providing a secret that already exists will silently override it.'
         ),
     )
+    # When true, prefer using an existing repository under the workspace
+    # working directory instead of attempting to `git clone` remotely.
+    # This is a safety opt-in to avoid accidental overwrites when a host
+    # directory is mounted into the sandbox.
+    use_local_repository: bool | None = Field(
+        default=False,
+        description=(
+            'If true, reuse existing repo directory at {working_dir}/{repo_name} '
+            'if present; do not treat clone failure as a signal to reuse.'
+        ),
+    )
 
 
 class AppConversationUpdateRequest(BaseModel):

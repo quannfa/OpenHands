@@ -72,11 +72,13 @@ class V1ConversationService {
     plugins?: PluginSpec[],
     sandbox_id?: string,
     llm_model?: string,
+    use_local_repository?: boolean,
   ): Promise<V1AppConversationStartTask> {
     const body: V1AppConversationStartRequest = {
       selected_repository: selectedRepository,
       git_provider,
       selected_branch,
+      use_local_repository: use_local_repository ?? false,
       suggested_task: suggestedTask,
       title: conversationInstructions,
       trigger,
