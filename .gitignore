@@ -261,6 +261,11 @@ test-results
 .sessions
 .eval_sessions
 
+# 忽略 openhands_in_docker 下所有内容（包括文件和子目录里的文件）
 openhands_in_docker/**
+
+# 但不忽略该目录本身（让 Git 能进入这个目录检查）
 !openhands_in_docker/
+
+# 不忽略所有（任意深度的） .gitkeep 文件
 !openhands_in_docker/**/.gitkeep
