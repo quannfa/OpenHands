@@ -261,4 +261,6 @@ test-results
 .sessions
 .eval_sessions
 
-openhands_in_docker/**/*.*
+openhands_in_docker/**
+!openhands_in_docker/
+!openhands_in_docker/**/.gitkeep
