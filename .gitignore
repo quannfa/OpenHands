@@ -261,5 +261,4 @@ test-results
 .sessions
 .eval_sessions
 
-workspace/*
-openhands_home/*
+openhands_in_docker/**/*.*

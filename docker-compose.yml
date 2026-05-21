@@ -12,17 +12,17 @@ services:
       #- SANDBOX_USER_ID=${SANDBOX_USER_ID:-1234} # enable this only if you want a specific non-root sandbox user but you will have to manually adjust permissions of ~/.openhands for this user
       - SANDBOX_NVIDIA_RUNTIME=${SANDBOX_NVIDIA_RUNTIME:-true}
       - SANDBOX_GPU_COUNT=all
-      - WORKSPACE_MOUNT_PATH=${WORKSPACE_BASE:-$PWD/workspace}
-      - SANDBOX_VOLUMES=/data/zqf/OpenHands/workspace:/workspace:rw,/data/zqf:/data/zqf:rw
+      - WORKSPACE_MOUNT_PATH=/home/aibio/Task/OpenHands/openhands_in_docker/workspace
+      - SANDBOX_VOLUMES=/home/aibio/Task/OpenHands/openhands_in_docker/workspace:/workspace:rw,/home/aibio/Task:/home/aibio/Task:rw
     ports:
       - "3000:3000"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /data/zqf/openhands_app/openhands_home:/.openhands
-      - ${WORKSPACE_BASE:-$PWD/workspace}:/opt/workspace_base
-      - /data/zqf:/data/zqf
+      - /home/aibio/Task/OpenHands/openhands_in_docker/home:/.openhands
+      - /home/aibio/Task/OpenHands/openhands_in_docker/workspace:/opt/workspace_base
+      - /home/aibio/Task:/home/aibio/Task
     pull_policy: build
     stdin_open: true
     tty: true
