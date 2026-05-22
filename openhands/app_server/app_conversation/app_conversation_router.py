@@ -587,6 +587,98 @@ async def send_message_to_conversation(
 
 
 @router.post(
+    '/{conversation_id}/stop',
+    responses={
+        404: {'description': 'Conversation, sandbox, or agent server not found'},
+        409: {'description': 'Sandbox is not running'},
+        502: {'description': 'Agent server returned an error'},
+    },
+)
+async def stop_conversation(
+    conversation_id: UUID,
+    app_conversation_service: AppConversationService = (
+        app_conversation_service_dependency
+    ),
+    sandbox_service: SandboxService = sandbox_service_dependency,
+    sandbox_spec_service: SandboxSpecService = sandbox_spec_service_dependency,
+    httpx_client: httpx.AsyncClient = httpx_client_dependency,
+) -> Success:
+    """Soft-stop (pause) a running conversation.
+
+    Instead of deleting the conversation on the agent-server this endpoint
+    requests the agent-server to pause the conversation. The pause should
+    interrupt running tasks (cancel LLM requests, terminate process groups)
+    while preserving the conversation state and `conversation_url` so the
+    frontend can reconnect and resume later.
+    """
+    ctx = await _get_agent_server_context(
+        conversation_id,
+        app_conversation_service,
+        sandbox_service,
+        sandbox_spec_service,
+    )
+    if isinstance(ctx, JSONResponse):
+        raise HTTPException(
+            status_code=ctx.status_code,
+            detail=f'Conversation {conversation_id} is not reachable',
+        )
+    if ctx is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail='Sandbox is paused; resume it before stopping the conversation.',
+        )
+
+    headers = {'X-Session-API-Key': ctx.session_api_key} if ctx.session_api_key else {}
+
+    try:
+        # Request the agent-server to pause (soft-stop) the conversation.
+        response = await httpx_client.post(
+            f'{ctx.agent_server_url}/api/conversations/{conversation_id}/pause',
+            headers=headers,
+            timeout=30.0,
+        )
+        response.raise_for_status()
+        # Also ensure the sandbox process/container is paused at the orchestration
+        # layer. This helps interrupt any non-cooperative long-running tasks
+        # that the agent-server didn't cancel immediately.
+        try:
+            paused = await sandbox_service.pause_sandbox(ctx.sandbox.id)
+            if not paused:
+                logger.warning('pause_sandbox returned False for sandbox %s', ctx.sandbox.id)
+            else:
+                # Verify the sandbox reports PAUSED status from the orchestrator
+                try:
+                    checked = await sandbox_service.get_sandbox(ctx.sandbox.id)
+                    if checked is None or checked.status != SandboxStatus.PAUSED:
+                        logger.warning(
+                            'Sandbox %s did not report PAUSED after pause_sandbox(): %s',
+                            ctx.sandbox.id,
+                            getattr(checked, 'status', None),
+                        )
+                except Exception:
+                    logger.exception('Failed to re-check sandbox status for %s', ctx.sandbox.id)
+        except Exception:
+            logger.exception('Failed to pause sandbox %s', ctx.sandbox.id)
+    except httpx.HTTPStatusError as e:
+        logger.error(
+            'Agent server returned error during stop/pause: '
+            f'{e.response.status_code} - {e.response.text}'
+        )
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f'Agent server error: {e.response.status_code}',
+        )
+    except httpx.RequestError as e:
+        logger.error(f'Failed to reach agent server during stop/pause: {e}')
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail='Failed to reach agent server.',
+        )
+
+    return Success()
+
+
+@router.post(
     '/{conversation_id}/switch_profile',
     responses={
         404: {'description': 'Conversation, sandbox, or profile not found'},

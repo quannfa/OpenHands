@@ -37,6 +37,8 @@ function mapV1StatusToV0State(
       return AgentState.ERROR;
     case V1ExecutionStatus.STUCK:
       return AgentState.ERROR; // Map STUCK to ERROR for now
+    case V1ExecutionStatus.DELETING:
+      return AgentState.AWAITING_USER_INPUT;
     default:
       return AgentState.LOADING;
   }

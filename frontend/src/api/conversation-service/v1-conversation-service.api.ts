@@ -209,6 +209,19 @@ class V1ConversationService {
   }
 
   /**
+   * Stop a V1 conversation.
+   * This proxies through the app-server stop endpoint, which tears down the
+   * active agent-server conversation and returns the runtime to idle.
+   */
+  static async stopConversation(conversationId: string): Promise<{ success: boolean }> {
+    const { data } = await openHands.post<{ success: boolean }>(
+      `/api/v1/app-conversations/${conversationId}/stop`,
+      {},
+    );
+    return data;
+  }
+
+  /**
    * Ask the agent a side question without queueing a full turn.
    * @param conversationId The conversation ID
    * @param conversationUrl The conversation URL

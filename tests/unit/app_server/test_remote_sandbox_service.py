@@ -88,6 +88,7 @@ def remote_sandbox_service(
         runtime_class='gvisor',
         start_sandbox_timeout=120,
         max_num_sandboxes=10,
+        sandbox_user_id=1001,
         user_context=mock_user_context,
         httpx_client=mock_httpx_client,
         db_session=mock_db_session,
@@ -403,6 +404,11 @@ class TestSandboxLifecycle:
             sandbox_info = await remote_sandbox_service.start_sandbox()
 
         # Verify
+        call_args = remote_sandbox_service.httpx_client.request.call_args
+        request_data = call_args[1]['json']
+        assert request_data['run_as_user'] == 1001
+        assert request_data['run_as_group'] == 1001
+        assert request_data['fs_group'] == 1001
         assert sandbox_info.id == 'test-sandbox-123'
         assert sandbox_info.status == SandboxStatus.RUNNING
         remote_sandbox_service.pause_old_sandboxes.assert_called_once_with(

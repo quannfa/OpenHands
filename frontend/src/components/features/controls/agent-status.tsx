@@ -96,10 +96,16 @@ export function AgentStatus({
       </span>
       <div
         className={cn(
-          "bg-[#525252] box-border content-stretch flex flex-row gap-[3px] items-center justify-center overflow-clip px-0.5 py-1 relative rounded-[100px] shrink-0 size-6 transition-all duration-200 active:scale-95",
+          "box-border content-stretch flex flex-row gap-[3px] items-center justify-center overflow-clip px-0.5 py-1 relative rounded-[100px] shrink-0 size-6 transition-all duration-200 active:scale-95",
+          shouldShownAgentStop &&
+            "bg-[#DC2626] hover:bg-[#B91C1C] cursor-pointer",
+          shouldShownAgentResume &&
+            !shouldShownAgentStop &&
+            "bg-[#525252] hover:bg-[#737373] cursor-pointer",
           !isLoading &&
-            (shouldShownAgentStop || shouldShownAgentResume) &&
-            "hover:bg-[#737373] cursor-pointer",
+            !shouldShownAgentStop &&
+            !shouldShownAgentResume &&
+            "bg-[#525252]",
         )}
       >
         {isLoading && <AgentLoading />}

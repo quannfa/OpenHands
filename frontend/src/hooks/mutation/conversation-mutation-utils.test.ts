@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { QueryClient } from "@tanstack/react-query";
-import { updateConversationSandboxStatusInCache } from "./conversation-mutation-utils";
+import {
+  updateConversationExecutionStatusInCache,
+  updateConversationSandboxStatusInCache,
+} from "./conversation-mutation-utils";
 import { V1ExecutionStatus } from "#/types/v1/core/base/common";
 import { V1AppConversation } from "#/api/conversation-service/v1-conversation-service.types";
 
@@ -74,5 +77,31 @@ describe("updateConversationSandboxStatusInCache", () => {
 
     expect(cachedConversation?.status).toBeUndefined();
     expect(cachedConversation?.sandbox_status).toBe("STARTING");
+  });
+
+  it("updates the cached execution_status for stop transitions", () => {
+    const queryClient = new QueryClient();
+    const conversation = createConversation();
+
+    queryClient.setQueryData(
+      ["user", "conversation", conversation.id],
+      conversation,
+    );
+
+    updateConversationExecutionStatusInCache(
+      queryClient,
+      conversation.id,
+      V1ExecutionStatus.IDLE,
+    );
+
+    expect(
+      queryClient.getQueryData<V1AppConversation | null>([
+        "user",
+        "conversation",
+        conversation.id,
+      ]),
+    ).toMatchObject({
+      execution_status: V1ExecutionStatus.IDLE,
+    });
   });
 });

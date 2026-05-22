@@ -72,6 +72,7 @@ export enum V1ExecutionStatus {
   FINISHED = "finished",
   ERROR = "error",
   STUCK = "stuck",
+  DELETING = "deleting",
 }
 
 // Content types for LLM messages

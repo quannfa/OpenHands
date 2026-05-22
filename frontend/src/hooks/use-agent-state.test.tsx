@@ -98,4 +98,19 @@ describe("useAgentState", () => {
     expect(result.current.curAgentState).toBe(AgentState.STOPPED);
     expect(result.current.isArchived).toBe(true);
   });
+
+  it("treats deleting conversations as idle-like after stop", () => {
+    mockUseActiveConversation.mockReturnValue({
+      data: {
+        execution_status: V1ExecutionStatus.DELETING,
+        sandbox_status: "RUNNING",
+      },
+    } as ReturnType<typeof useActiveConversation>);
+
+    const { result } = renderHook(() => useAgentState());
+
+    expect(result.current.executionStatus).toBe(V1ExecutionStatus.DELETING);
+    expect(result.current.curAgentState).toBe(AgentState.AWAITING_USER_INPUT);
+    expect(result.current.isArchived).toBe(false);
+  });
 });

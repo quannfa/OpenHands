@@ -9,11 +9,11 @@ services:
     environment:
       - AGENT_SERVER_IMAGE_REPOSITORY=${AGENT_SERVER_IMAGE_REPOSITORY:-ghcr.io/openhands/agent-server}
       - AGENT_SERVER_IMAGE_TAG=${AGENT_SERVER_IMAGE_TAG:-1.19.1-python}
-      #- SANDBOX_USER_ID=${SANDBOX_USER_ID:-1234} # enable this only if you want a specific non-root sandbox user but you will have to manually adjust permissions of ~/.openhands for this user
+      - SANDBOX_USER_ID=${SANDBOX_USER_ID:-1001} # match the host UID to avoid workspace permission issues
       - SANDBOX_NVIDIA_RUNTIME=${SANDBOX_NVIDIA_RUNTIME:-true}
       - SANDBOX_GPU_COUNT=all
       - WORKSPACE_MOUNT_PATH=/home/aibio/Task/OpenHands/openhands_in_docker/workspace
-      - SANDBOX_VOLUMES=/home/aibio/Task/OpenHands/openhands_in_docker/workspace:/workspace:rw,/home/aibio/Task:/home/aibio/Task:rw
+      - SANDBOX_VOLUMES=/home/aibio/Task/OpenHands/openhands_in_docker/workspace:/workspace:rw,/home/aibio/Task:/home/aibio/Task:rw,/home/aibio/Task/OpenHands/openhands_in_docker/home/skills:/home/openhands/.agents/skills:ro
     ports:
       - "3000:3000"
     extra_hosts:

@@ -3,6 +3,7 @@ import V1ConversationService from "#/api/conversation-service/v1-conversation-se
 import { V1AppConversation } from "#/api/conversation-service/v1-conversation-service.types";
 import { SandboxService } from "#/api/sandbox-service/sandbox-service.api";
 import { V1SandboxStatus } from "#/api/sandbox-service/sandbox-service.types";
+import { V1ExecutionStatus } from "#/types/v1/core/base/common";
 
 /**
  * Fetches a V1 conversation's sandbox_id and conversation_url
@@ -49,6 +50,13 @@ export const pauseV1Conversation = async (conversationId: string) => {
     conversationUrl,
     sessionApiKey,
   );
+};
+
+/**
+ * Stop a V1 conversation by calling the app-server stop endpoint.
+ */
+export const stopV1Conversation = async (conversationId: string) => {
+  return V1ConversationService.stopConversation(conversationId);
 };
 
 /**
@@ -126,6 +134,47 @@ export const updateConversationSandboxStatusInCache = (
         ...page,
         items: page.items.map((conv) =>
           conv.id === conversationId ? { ...conv, sandbox_status } : conv,
+        ),
+      })),
+    };
+  });
+};
+
+/**
+ * Update cached V1 conversation execution status.
+ */
+export const updateConversationExecutionStatusInCache = (
+  queryClient: QueryClient,
+  conversationId: string,
+  execution_status: V1ExecutionStatus | null,
+): void => {
+  queryClient.setQueryData<V1AppConversation | null>(
+    ["user", "conversation", conversationId],
+    (oldData) => {
+      if (!oldData) return oldData;
+
+      return {
+        ...oldData,
+        execution_status,
+      };
+    },
+  );
+
+  queryClient.setQueriesData<{
+    pages: Array<{
+      items: Array<{ id: string; execution_status: V1ExecutionStatus | null }>;
+    }>;
+  }>({ queryKey: ["user", "conversations"] }, (oldData) => {
+    if (!oldData) return oldData;
+
+    return {
+      ...oldData,
+      pages: oldData.pages.map((page) => ({
+        ...page,
+        items: page.items.map((conv) =>
+          conv.id === conversationId
+            ? { ...conv, execution_status }
+            : conv,
         ),
       })),
     };

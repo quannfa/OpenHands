@@ -2,7 +2,7 @@ import asyncio
 import hashlib
 import logging
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, AsyncGenerator, Union
 from urllib.parse import urlparse
@@ -76,6 +76,11 @@ def _hash_session_api_key(session_api_key: str) -> str:
     return hashlib.sha256(session_api_key.encode()).hexdigest()
 
 
+def _get_default_sandbox_user_id() -> int:
+    """Read the sandbox UID from the environment, defaulting to the current value."""
+    return int(os.getenv('SANDBOX_USER_ID', '10001'))
+
+
 class StoredRemoteSandbox(Base):
     """Local storage for remote sandbox info.
 
@@ -120,6 +125,7 @@ class RemoteSandboxService(SandboxService):
     user_context: UserContext
     httpx_client: httpx.AsyncClient
     db_session: AsyncSession
+    sandbox_user_id: int = field(default_factory=_get_default_sandbox_user_id)
 
     async def _send_runtime_api_request(
         self, method: str, path: str, **kwargs: Any
@@ -489,9 +495,9 @@ class RemoteSandboxService(SandboxService):
                 'environment': environment,
                 'session_id': sandbox_id,  # Use sandbox_id as session_id
                 'resource_factor': self.resource_factor,
-                'run_as_user': 10001,
-                'run_as_group': 10001,
-                'fs_group': 10001,
+                'run_as_user': self.sandbox_user_id,
+                'run_as_group': self.sandbox_user_id,
+                'fs_group': self.sandbox_user_id,
             }
 
             # Add runtime class if specified

@@ -1,25 +1,23 @@
 import { AgentStatus } from "#/components/features/controls/agent-status";
 import { Tools } from "../../controls/tools";
-import { useUnifiedPauseConversationSandbox } from "#/hooks/mutation/use-unified-stop-conversation";
 import { useConversationId } from "#/hooks/use-conversation-id";
-import { useV1PauseConversation } from "#/hooks/mutation/use-v1-pause-conversation";
 import { useV1ResumeConversation } from "#/hooks/mutation/use-v1-resume-conversation";
 import { ChangeAgentButton } from "../change-agent-button";
 import { SwitchProfileButton } from "../switch-profile-button";
+import { useV1StopConversation } from "#/hooks/mutation/use-v1-stop-conversation";
 
 interface ChatInputActionsProps {
   disabled: boolean;
 }
 
 export function ChatInputActions({ disabled }: ChatInputActionsProps) {
-  const pauseConversationSandboxMutation = useUnifiedPauseConversationSandbox();
-  const v1PauseConversationMutation = useV1PauseConversation();
+  const v1StopConversationMutation = useV1StopConversation();
   const v1ResumeConversationMutation = useV1ResumeConversation();
   const { conversationId } = useConversationId();
 
-  const handlePauseAgent = () => {
-    // V1: Pause the conversation (agent execution)
-    v1PauseConversationMutation.mutate({ conversationId });
+  const handleStopAgent = () => {
+    // V1: Stop the conversation (agent execution)
+    v1StopConversationMutation.mutate({ conversationId });
   };
 
   const handleResumeAgentClick = () => {
@@ -27,9 +25,7 @@ export function ChatInputActions({ disabled }: ChatInputActionsProps) {
     v1ResumeConversationMutation.mutate({ conversationId });
   };
 
-  const isPausing =
-    pauseConversationSandboxMutation.isPending ||
-    v1PauseConversationMutation.isPending;
+  const isPausing = v1StopConversationMutation.isPending;
 
   return (
     <div className="w-full flex items-center justify-between">
@@ -42,7 +38,7 @@ export function ChatInputActions({ disabled }: ChatInputActionsProps) {
       </div>
       <AgentStatus
         className="ml-2 md:ml-3"
-        handleStop={handlePauseAgent}
+        handleStop={handleStopAgent}
         handleResumeAgent={handleResumeAgentClick}
         disabled={disabled}
         isPausing={isPausing}
