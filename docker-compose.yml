@@ -8,7 +8,7 @@ services:
     container_name: openhands-app-zqf
     environment:
       - AGENT_SERVER_IMAGE_REPOSITORY=${AGENT_SERVER_IMAGE_REPOSITORY:-ghcr.io/openhands/agent-server}
-      - AGENT_SERVER_IMAGE_TAG=${AGENT_SERVER_IMAGE_TAG:-1.19.1-python}
+      - AGENT_SERVER_IMAGE_TAG=${AGENT_SERVER_IMAGE_TAG:-1.25.0-python}
       - SANDBOX_USER_ID=${SANDBOX_USER_ID:-1001} # match the host UID to avoid workspace permission issues
       - SANDBOX_NVIDIA_RUNTIME=${SANDBOX_NVIDIA_RUNTIME:-true}
       - SANDBOX_GPU_COUNT=all

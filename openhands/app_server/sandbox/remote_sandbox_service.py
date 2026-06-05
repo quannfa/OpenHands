@@ -4,7 +4,7 @@ import logging
 import os
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, AsyncGenerator, Union
+from typing import Any, AsyncGenerator
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -342,7 +342,7 @@ class RemoteSandboxService(SandboxService):
 
         return SandboxPage(items=items, next_page_id=next_page_id)
 
-    async def get_sandbox(self, sandbox_id: str) -> Union[SandboxInfo, None]:
+    async def get_sandbox(self, sandbox_id: str) -> SandboxInfo | None:
         """Get a single sandbox by checking its corresponding runtime."""
         stored_sandbox = await self._get_stored_sandbox(sandbox_id)
         if stored_sandbox is None:
@@ -360,7 +360,7 @@ class RemoteSandboxService(SandboxService):
 
     async def _get_sandbox_by_session_api_key_legacy(
         self, session_api_key: str
-    ) -> Union[SandboxInfo, None]:
+    ) -> SandboxInfo | None:
         """Legacy method to get sandbox by session API key via runtime API.
 
         This is the fallback for sandboxes created before the session_api_key_hash
@@ -416,7 +416,7 @@ class RemoteSandboxService(SandboxService):
 
     async def get_sandbox_by_session_api_key(
         self, session_api_key: str
-    ) -> Union[SandboxInfo, None]:
+    ) -> SandboxInfo | None:
         """Get a single sandbox by session API key.
 
         Uses the stored session_api_key_hash for efficient database lookup instead
