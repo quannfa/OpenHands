@@ -178,6 +178,33 @@ class SandboxService(ABC):
         Return False if the sandbox did not exist.
         """
 
+    async def interrupt_sandbox_processes(self, sandbox_id: str) -> bool:
+        """Interrupt agent-spawned processes inside a sandbox without pausing it.
+
+        This is the "Ctrl+C the current task" primitive. Implementations should
+        kill (with signal escalation) any processes the agent started while
+        working on the user task, while leaving the sandbox container itself
+        and any user-owned services (editor, ssh, manually-started servers)
+        untouched.
+
+        Default: not supported — subclasses that can do this must override.
+
+        Args:
+            sandbox_id: The sandbox whose agent processes should be interrupted.
+
+        Returns:
+            True if the sandbox exists and the interrupt was attempted.
+            False if the sandbox was not found.
+
+        Raises:
+            NotImplementedError: If the sandbox backend has no way to reach
+                into the running container (e.g. a managed remote runtime
+                that does not expose a kill endpoint).
+        """
+        raise NotImplementedError(
+            f'{type(self).__name__} does not support interrupt_sandbox_processes'
+        )
+
     @abstractmethod
     async def delete_sandbox(self, sandbox_id: str) -> bool:
         """Begin the process of deleting a sandbox (which may involve stopping it).

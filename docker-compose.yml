@@ -23,6 +23,9 @@ services:
       - /home/aibio/Task/OpenHands/openhands_in_docker/home:/.openhands
       - /home/aibio/Task/OpenHands/openhands_in_docker/workspace:/opt/workspace_base
       - /home/aibio/Task:/home/aibio/Task
-    pull_policy: build
+      # Dev: mount the local app_server source so code changes apply without rebuild.
+      # When the Docker registry is reachable again, swap this for a fresh `--build`.
+      - /home/aibio/Task/OpenHands/openhands/app_server:/app/openhands/app_server:ro
+    pull_policy: never
     stdin_open: true
     tty: true

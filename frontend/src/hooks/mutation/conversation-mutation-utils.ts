@@ -32,11 +32,21 @@ const fetchV1ConversationData = async (
 };
 
 /**
- * Pause a V1 conversation sandbox by fetching the sandbox_id and pausing it
+/**
+ * "Stop" a V1 conversation from list/menu surfaces.
+ *
+ * Previously this called ``POST /api/v1/sandboxes/{id}/pause`` which froze
+ * the entire sandbox container (including code-server, ssh, and any user
+ * services). The new contract uses the app-server's ``/stop`` endpoint,
+ * which only interrupts the agent loop and the agent-spawned subprocesses
+ * while keeping the sandbox itself running so the user can immediately send
+ * a follow-up message without going through a resume flow.
+ *
+ * The function name and the ``useUnifiedPauseConversationSandbox`` hook
+ * name are kept for backwards compatibility with existing call sites.
  */
 export const pauseV1ConversationSandbox = async (conversationId: string) => {
-  const { sandboxId } = await fetchV1ConversationData(conversationId);
-  return SandboxService.pauseSandbox(sandboxId);
+  return V1ConversationService.stopConversation(conversationId);
 };
 
 /**

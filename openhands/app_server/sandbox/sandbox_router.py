@@ -81,11 +81,30 @@ async def start_sandbox(
     return info
 
 
-@router.post('/{sandbox_id}/pause', responses={404: {'description': 'Item not found'}})
+@router.post(
+    '/{sandbox_id}/pause',
+    responses={404: {'description': 'Item not found'}},
+    deprecated=True,
+    summary='[Deprecated] Suspend the entire sandbox container',
+    description=(
+        'Deprecated: prefer ``POST /api/v1/app-conversations/{id}/stop`` which '
+        'interrupts the agent without freezing the container. This endpoint '
+        'remains available for backwards compatibility and for callers that '
+        'genuinely want to suspend an idle sandbox to save resources; it '
+        'invokes ``docker pause`` on the container, which freezes every '
+        'process inside (including the agent-server, code-server, ssh, and '
+        'any user-started services).'
+    ),
+)
 async def pause_sandbox(
     sandbox_id: str,
     sandbox_service: SandboxService = sandbox_service_dependency,
 ) -> Success:
+    _logger.warning(
+        'Deprecated endpoint POST /sandboxes/%s/pause was called; prefer '
+        'POST /api/v1/app-conversations/{id}/stop',
+        sandbox_id,
+    )
     exists = await sandbox_service.pause_sandbox(sandbox_id)
     if not exists:
         raise HTTPException(status.HTTP_404_NOT_FOUND)

@@ -1,16 +1,27 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate, useParams } from "react-router";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { TOAST_OPTIONS } from "#/utils/custom-toast-handlers";
 import { I18nKey } from "#/i18n/declaration";
 import {
   pauseV1ConversationSandbox,
-  updateConversationSandboxStatusInCache,
+  updateConversationExecutionStatusInCache,
 } from "./conversation-mutation-utils";
+import { useV1ConversationStateStore } from "#/stores/v1-conversation-state-store";
+import { V1ExecutionStatus } from "#/types/v1/core/base/common";
 
 /**
- * Hook to pause a conversation sandbox.
+ * Hook to interrupt a conversation.
+ *
+ * Despite the legacy "Pause Sandbox" name (kept for backwards compat with
+ * existing call sites), this no longer freezes the sandbox container. It
+ * sends the request to the app-server ``/stop`` endpoint, which:
+ *   1. pauses the agent loop,
+ *   2. signals the agent-spawned subprocesses (SIGINT → SIGTERM → SIGKILL),
+ *   3. leaves the sandbox container itself running.
+ *
+ * As a result the user can keep their editor / terminal open and send a
+ * follow-up message immediately, without needing a Resume action.
  *
  * Usage:
  * const { mutate: stopConversation } = useUnifiedPauseConversationSandbox();
@@ -19,8 +30,6 @@ import {
 export const useUnifiedPauseConversationSandbox = () => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
-  const params = useParams<{ conversationId: string }>();
 
   return useMutation({
     mutationKey: ["stop-conversation"],
@@ -59,16 +68,25 @@ export const useUnifiedPauseConversationSandbox = () => {
       }
       toast.success(t(I18nKey.TOAST$CONVERSATION_STOPPED), TOAST_OPTIONS);
 
-      updateConversationSandboxStatusInCache(
+      // Only the execution status changes — the sandbox keeps running so the
+      // user can immediately send a follow-up message without a resume flow.
+      useV1ConversationStateStore
+        .getState()
+        .setExecutionStatus(V1ExecutionStatus.PAUSED);
+      updateConversationExecutionStatusInCache(
         queryClient,
         variables.conversationId,
-        "PAUSED",
+        V1ExecutionStatus.PAUSED,
       );
-
-      // Only redirect if we're stopping the conversation we're currently viewing
-      if (params.conversationId === variables.conversationId) {
-        navigate("/");
-      }
+    },
+    onSettled: (_, __, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["user", "conversation", variables.conversationId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["user", "conversations"] });
+      queryClient.invalidateQueries({
+        queryKey: ["v1-batch-get-app-conversations"],
+      });
     },
   });
 };
